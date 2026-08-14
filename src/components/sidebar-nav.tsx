@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileText, ShieldCheck } from "lucide-react";
+import { FileText, LayoutDashboard, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SidebarNavProps {
@@ -10,8 +10,9 @@ interface SidebarNavProps {
 }
 
 const items = [
-  { href: "/dashboard/reports", label: "Báo cáo", icon: FileText, requiresAdmin: false },
-  { href: "/dashboard/audit-logs", label: "Nhật ký giám sát", icon: ShieldCheck, requiresAdmin: true },
+  { href: "/dashboard", label: "Tổng quan", icon: LayoutDashboard, requiresAdmin: false, exact: true },
+  { href: "/dashboard/reports", label: "Báo cáo", icon: FileText, requiresAdmin: false, exact: false },
+  { href: "/dashboard/audit-logs", label: "Nhật ký giám sát", icon: ShieldCheck, requiresAdmin: true, exact: false },
 ];
 
 export function SidebarNav({ canViewAuditLogs }: SidebarNavProps) {
@@ -23,7 +24,7 @@ export function SidebarNav({ canViewAuditLogs }: SidebarNavProps) {
         .filter((item) => !item.requiresAdmin || canViewAuditLogs)
         .map((item) => {
           const Icon = item.icon;
-          const active = pathname.startsWith(item.href);
+          const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
           return (
             <Link
               key={item.href}

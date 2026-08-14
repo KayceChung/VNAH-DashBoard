@@ -38,3 +38,32 @@ export interface SignedUrlResponse {
   signedUrl: string;
   expiresIn: number;
 }
+
+export interface FormSupportCount {
+  code: string;
+  name: string;
+  category: string;
+  count: number;
+}
+
+export interface GenderCount {
+  label: string;
+  count: number;
+}
+
+export interface ProvinceCount {
+  code: string;
+  name: string;
+  count: number;
+  lat: number;
+  lng: number;
+}
+
+export interface OverviewData {
+  totalBeneficiaries: number;
+  totalSupportInstances: number;
+  totalProvincesCovered: number;
+  formCounts: FormSupportCount[];
+  genderCounts: GenderCount[];
+  provinceCounts: ProvinceCount[];
+}

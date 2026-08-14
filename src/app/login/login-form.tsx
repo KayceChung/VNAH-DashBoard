@@ -30,7 +30,7 @@ export function LoginForm() {
       return;
     }
 
-    const next = searchParams.get("next") ?? "/dashboard/reports";
+    const next = searchParams.get("next") ?? "/dashboard";
     router.replace(next);
     router.refresh();
   }
