@@ -13,10 +13,14 @@ interface PdfViewerProps {
 }
 
 /**
- * Renders a PDF strictly from a short-lived signed URL, inside a sandboxed
- * iframe. The URL is never persisted (not stored in component state beyond
- * this render, not written to localStorage/query params) so it expires with
- * no lingering, reusable link left in the browser.
+ * Renders a PDF from a blob: URL built out of a short-lived signed-URL
+ * fetch (see reports-table.tsx) — never the direct storage URL, and never
+ * persisted beyond this render. Deliberately unsandboxed: the content is a
+ * blob we fetched ourselves after an RLS-checked, audit-logged lookup (not
+ * arbitrary third-party HTML), and Chrome's built-in PDF viewer refuses to
+ * render at all inside a sandboxed iframe regardless of which tokens are
+ * granted — so sandboxing it here breaks the feature without adding
+ * meaningful protection against content we already trust.
  */
 export function PdfViewer({ open, onOpenChange, title, signedUrl, loading, error }: PdfViewerProps) {
   return (
@@ -32,12 +36,7 @@ export function PdfViewer({ open, onOpenChange, title, signedUrl, loading, error
         </div>
       )}
       {!loading && !error && signedUrl && (
-        <iframe
-          src={signedUrl}
-          title={title}
-          className="h-full min-h-[70vh] w-full"
-          sandbox="allow-same-origin allow-scripts allow-popups"
-        />
+        <iframe src={signedUrl} title={title} className="h-full min-h-[70vh] w-full" />
       )}
     </Dialog>
   );
