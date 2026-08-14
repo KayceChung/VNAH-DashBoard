@@ -1,9 +1,11 @@
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { VN_PROVINCE_CENTROIDS } from "@/lib/vn-province-centroids";
 import { StatTile } from "@/components/dashboard/stat-tile";
 import { FormsBarChart } from "@/components/dashboard/forms-bar-chart";
 import { GenderBar } from "@/components/dashboard/gender-bar";
 import { ProvinceMap } from "@/components/dashboard/province-map";
+import { DateRangeFilter } from "@/components/dashboard/date-range-filter";
 import { Users, ClipboardList, MapPinned } from "lucide-react";
 import type { FormSupportCount, GenderCount, OverviewData, ProvinceCount } from "@/types/domain";
 
@@ -28,8 +30,22 @@ interface AssessmentFormStatsRow {
   forms: { code: string; name: string; category: string } | null;
 }
 
-export default async function DashboardOverviewPage() {
+interface DashboardOverviewPageProps {
+  searchParams: Promise<{ from?: string; to?: string }>;
+}
+
+export default async function DashboardOverviewPage({ searchParams }: DashboardOverviewPageProps) {
+  const { from, to } = await searchParams;
   const supabase = await createClient();
+
+  let assessmentFormsQuery = supabase
+    .from("assessment_forms")
+    .select("form_id, forms(code, name, category)")
+    .eq("status", "committed")
+    .is("deleted_at", null)
+    .limit(FETCH_LIMIT);
+  if (from) assessmentFormsQuery = assessmentFormsQuery.gte("created_at", `${from}T00:00:00`);
+  if (to) assessmentFormsQuery = assessmentFormsQuery.lte("created_at", `${to}T23:59:59.999`);
 
   const [beneficiaries, assessmentForms] = await Promise.all([
     supabase
@@ -38,12 +54,7 @@ export default async function DashboardOverviewPage() {
       .eq("status", "active")
       .is("deleted_at", null)
       .limit(FETCH_LIMIT),
-    supabase
-      .from("assessment_forms")
-      .select("form_id, forms(code, name, category)")
-      .eq("status", "committed")
-      .is("deleted_at", null)
-      .limit(FETCH_LIMIT),
+    assessmentFormsQuery,
   ]);
 
   const beneficiaryRows = (beneficiaries.data as BeneficiaryStatsRow[] | null) ?? [];
@@ -59,7 +70,8 @@ export default async function DashboardOverviewPage() {
     .map(([key, count]) => ({ label: GENDER_LABEL[key] ?? "Khác", count }))
     .sort((a, b) => b.count - a.count);
 
-  // Beneficiaries by province (geography chart)
+  // Beneficiaries by province (geography chart) — current caseload, not
+  // scoped to the date filter (that filter only applies to activity below).
   const provinceTally = new Map<string, { name: string; count: number }>();
   for (const row of beneficiaryRows) {
     const code = row.provinces?.code;
@@ -79,7 +91,7 @@ export default async function DashboardOverviewPage() {
     .filter((row): row is ProvinceCount => row !== null)
     .sort((a, b) => b.count - a.count);
 
-  // Support instances by the clinical forms ("12 phiếu")
+  // Support instances by the clinical forms — scoped to the date filter.
   const formTally = new Map<string, FormSupportCount>();
   for (const row of assessmentFormRows) {
     if (!row.forms) continue;
@@ -150,10 +162,17 @@ export default async function DashboardOverviewPage() {
       </div>
 
       <div className="rounded-lg border border-border bg-card p-4">
-        <h2 className="mb-1 text-sm font-semibold">Số lượt hỗ trợ theo phiếu đánh giá</h2>
-        <p className="mb-4 text-xs text-muted-foreground">
-          Số phiếu đã ghi nhận (Ghi nhận/commit) theo từng loại phiếu CSTN/PHCN
-        </p>
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="mb-1 text-sm font-semibold">Số lượt hỗ trợ theo phiếu đánh giá</h2>
+            <p className="text-xs text-muted-foreground">
+              Số phiếu đã ghi nhận (Ghi nhận/commit) theo từng loại phiếu CSTN/PHCN
+            </p>
+          </div>
+          <Suspense fallback={null}>
+            <DateRangeFilter />
+          </Suspense>
+        </div>
         <FormsBarChart data={overview.formCounts} />
       </div>
     </div>

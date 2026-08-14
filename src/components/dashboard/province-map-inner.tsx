@@ -1,15 +1,19 @@
 "use client";
 
 import "leaflet/dist/leaflet.css";
-import { CircleMarker, MapContainer, Popup, TileLayer } from "react-leaflet";
+import { latLngBounds } from "leaflet";
+import { AttributionControl, CircleMarker, MapContainer, Popup, TileLayer, ZoomControl } from "react-leaflet";
 import { sequentialStep } from "@/lib/utils";
 import type { ProvinceCount } from "@/types/domain";
 
-const VIETNAM_CENTER: [number, number] = [16.0, 107.5];
+// Fixed bounding box around Vietnam (not derived from data) so the map
+// always frames the whole country consistently, regardless of which
+// provinces currently have beneficiaries.
+const VIETNAM_BOUNDS = latLngBounds([8.2, 101.8], [23.5, 110.0]);
 
 function radiusFor(count: number, max: number) {
   if (max <= 0) return 6;
-  return 6 + Math.sqrt(count / max) * 22;
+  return 6 + Math.sqrt(count / max) * 20;
 }
 
 export function ProvinceMapInner({ data }: { data: ProvinceCount[] }) {
@@ -23,15 +27,25 @@ export function ProvinceMapInner({ data }: { data: ProvinceCount[] }) {
     <div>
       <div className="h-80 w-full overflow-hidden rounded-md border border-border">
         <MapContainer
-          center={VIETNAM_CENTER}
-          zoom={5.4}
+          bounds={VIETNAM_BOUNDS}
+          maxBounds={VIETNAM_BOUNDS.pad(0.3)}
+          minZoom={5}
+          maxZoom={9}
           scrollWheelZoom={false}
+          zoomControl={false}
+          attributionControl={false}
           style={{ height: "100%", width: "100%" }}
         >
+          {/* CARTO Positron — a light, low-clutter basemap that keeps the
+              beneficiary bubbles as the visual focus instead of dense OSM
+              road/label styling. */}
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+            subdomains="abcd"
+            maxZoom={19}
           />
+          <AttributionControl position="bottomright" prefix={false} />
+          <ZoomControl position="topright" />
           {data.map((row) => (
             <CircleMarker
               key={row.code}
