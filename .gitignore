@@ -1,0 +1,10 @@
+node_modules
+.next
+out
+.env
+.env.local
+.vercel
+*.tsbuildinfo
+.DS_Store
+supabase/.temp
+.claude/settings.local.json
