@@ -38,6 +38,17 @@ export default async function DashboardOverviewPage({ searchParams }: DashboardO
   const { from, to } = await searchParams;
   const supabase = await createClient();
 
+  // The date filter scopes every section on this page — both queries below
+  // get the same created_at range applied.
+  let beneficiariesQuery = supabase
+    .from("beneficiaries")
+    .select("sex, managing_branch_id, provinces(code, name)")
+    .eq("status", "active")
+    .is("deleted_at", null)
+    .limit(FETCH_LIMIT);
+  if (from) beneficiariesQuery = beneficiariesQuery.gte("created_at", `${from}T00:00:00`);
+  if (to) beneficiariesQuery = beneficiariesQuery.lte("created_at", `${to}T23:59:59.999`);
+
   let assessmentFormsQuery = supabase
     .from("assessment_forms")
     .select("form_id, forms(code, name, category)")
@@ -47,15 +58,7 @@ export default async function DashboardOverviewPage({ searchParams }: DashboardO
   if (from) assessmentFormsQuery = assessmentFormsQuery.gte("created_at", `${from}T00:00:00`);
   if (to) assessmentFormsQuery = assessmentFormsQuery.lte("created_at", `${to}T23:59:59.999`);
 
-  const [beneficiaries, assessmentForms] = await Promise.all([
-    supabase
-      .from("beneficiaries")
-      .select("sex, managing_branch_id, provinces(code, name)")
-      .eq("status", "active")
-      .is("deleted_at", null)
-      .limit(FETCH_LIMIT),
-    assessmentFormsQuery,
-  ]);
+  const [beneficiaries, assessmentForms] = await Promise.all([beneficiariesQuery, assessmentFormsQuery]);
 
   const beneficiaryRows = (beneficiaries.data as BeneficiaryStatsRow[] | null) ?? [];
   const assessmentFormRows = (assessmentForms.data as AssessmentFormStatsRow[] | null) ?? [];
@@ -70,8 +73,7 @@ export default async function DashboardOverviewPage({ searchParams }: DashboardO
     .map(([key, count]) => ({ label: GENDER_LABEL[key] ?? "Khác", count }))
     .sort((a, b) => b.count - a.count);
 
-  // Beneficiaries by province (geography chart) — current caseload, not
-  // scoped to the date filter (that filter only applies to activity below).
+  // Beneficiaries by province (geography chart)
   const provinceTally = new Map<string, { name: string; count: number }>();
   for (const row of beneficiaryRows) {
     const code = row.provinces?.code;
@@ -91,7 +93,7 @@ export default async function DashboardOverviewPage({ searchParams }: DashboardO
     .filter((row): row is ProvinceCount => row !== null)
     .sort((a, b) => b.count - a.count);
 
-  // Support instances by the clinical forms — scoped to the date filter.
+  // Support instances by the clinical forms
   const formTally = new Map<string, FormSupportCount>();
   for (const row of assessmentFormRows) {
     if (!row.forms) continue;
@@ -120,11 +122,16 @@ export default async function DashboardOverviewPage({ searchParams }: DashboardO
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-lg font-semibold">Tổng quan</h1>
-        <p className="text-sm text-muted-foreground">
-          Tình hình hoạt động của tổ chức, tổng hợp từ dữ liệu ứng dụng di động.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-lg font-semibold">Tổng quan</h1>
+          <p className="text-sm text-muted-foreground">
+            Tình hình hoạt động của tổ chức, tổng hợp từ dữ liệu ứng dụng di động.
+          </p>
+        </div>
+        <Suspense fallback={null}>
+          <DateRangeFilter />
+        </Suspense>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -162,17 +169,10 @@ export default async function DashboardOverviewPage({ searchParams }: DashboardO
       </div>
 
       <div className="rounded-lg border border-border bg-card p-4">
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="mb-1 text-sm font-semibold">Số lượt hỗ trợ theo phiếu đánh giá</h2>
-            <p className="text-xs text-muted-foreground">
-              Số phiếu đã ghi nhận (Ghi nhận/commit) theo từng loại phiếu CSTN/PHCN
-            </p>
-          </div>
-          <Suspense fallback={null}>
-            <DateRangeFilter />
-          </Suspense>
-        </div>
+        <h2 className="mb-1 text-sm font-semibold">Số lượt hỗ trợ theo phiếu đánh giá</h2>
+        <p className="mb-4 text-xs text-muted-foreground">
+          Số phiếu đã ghi nhận (Ghi nhận/commit) theo từng loại phiếu CSTN/PHCN
+        </p>
         <FormsBarChart data={overview.formCounts} />
       </div>
     </div>
