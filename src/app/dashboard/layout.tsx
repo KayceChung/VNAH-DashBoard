@@ -19,7 +19,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   if (!staff) redirect("/login");
 
-  const canViewAuditLogs = staff.role === "admin" || staff.role === "manager";
+  const canViewAdminSections = staff.role === "admin" || staff.role === "manager";
 
   return (
     <div className="flex h-screen overflow-hidden bg-muted/30">
@@ -28,7 +28,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <p className="text-sm font-semibold">VNAH Dashboard</p>
           <p className="text-xs text-muted-foreground">Báo cáo &amp; giám sát PDF</p>
         </div>
-        <SidebarNav canViewAuditLogs={canViewAuditLogs} />
+        <SidebarNav canViewAdminSections={canViewAdminSections} />
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">

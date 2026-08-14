@@ -67,3 +67,18 @@ export interface OverviewData {
   genderCounts: GenderCount[];
   provinceCounts: ProvinceCount[];
 }
+
+export interface StaffOption {
+  id: string;
+  fullName: string;
+  title: string | null;
+}
+
+export interface StaffPerformanceRow {
+  staffId: string;
+  fullName: string;
+  title: string | null;
+  formsCommitted: number;
+  casesOpened: number;
+  beneficiariesAssigned: number;
+}
