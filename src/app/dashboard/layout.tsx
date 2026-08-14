@@ -22,8 +22,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const canViewAuditLogs = staff.role === "admin" || staff.role === "manager";
 
   return (
-    <div className="flex min-h-screen bg-muted/30">
-      <aside className="hidden w-64 shrink-0 border-r border-border bg-card px-4 py-6 md:block">
+    <div className="flex h-screen overflow-hidden bg-muted/30">
+      <aside className="hidden w-64 shrink-0 overflow-y-auto border-r border-border bg-card px-4 py-6 md:block">
         <div className="mb-6 px-2">
           <p className="text-sm font-semibold">VNAH Dashboard</p>
           <p className="text-xs text-muted-foreground">Báo cáo &amp; giám sát PDF</p>
@@ -31,8 +31,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <SidebarNav canViewAuditLogs={canViewAuditLogs} />
       </aside>
 
-      <div className="flex min-h-screen flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-border bg-card px-6 py-3">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex shrink-0 items-center justify-between border-b border-border bg-card px-6 py-3">
           <div>
             <p className="text-sm font-medium">{staff.full_name}</p>
             <p className="text-xs capitalize text-muted-foreground">{staff.role}</p>
@@ -40,7 +40,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <SignOutButton />
         </header>
 
-        <main className="flex-1 p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-6">{children}</main>
       </div>
     </div>
   );
