@@ -1,8 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { ReportsTable } from "@/components/reports-table";
-import type { ReportRow } from "@/types/domain";
+import { FormCountSummary } from "@/components/form-count-summary";
+import type { FormSupportCount, ReportRow } from "@/types/domain";
 
 const PAGE_LIMIT = 50;
+// Separate, uncapped-ish query just for the summary counts below — the
+// itemized table above is deliberately capped to the 50 most recent per
+// resource type, which would under-count a "total by form type" summary.
+const SUMMARY_FETCH_LIMIT = 20000;
 
 // PostgREST embeds a many-to-one FK (e.g. assessment_forms.beneficiary_id ->
 // beneficiaries.id) as a single object at runtime, but the generated
@@ -33,11 +38,14 @@ interface DocumentQueryRow {
   beneficiary: BeneficiaryEmbed | null;
   staff: StaffEmbed | null;
 }
+interface FormSummaryQueryRow {
+  forms: { code: string; name: string; category: string } | null;
+}
 
 export default async function ReportsPage() {
   const supabase = await createClient();
 
-  const [assessmentForms, consents, ccdcForms] = await Promise.all([
+  const [assessmentForms, consents, ccdcForms, formSummary] = await Promise.all([
     supabase
       .from("assessment_forms")
       .select(
@@ -59,11 +67,34 @@ export default async function ReportsPage() {
       .not("pdf_path", "is", null)
       .order("created_at", { ascending: false })
       .limit(PAGE_LIMIT),
+    supabase
+      .from("assessment_forms")
+      .select("forms(code, name, category)")
+      .not("pdf_path", "is", null)
+      .is("deleted_at", null)
+      .limit(SUMMARY_FETCH_LIMIT),
   ]);
 
   const assessmentFormRows = (assessmentForms.data as AssessmentFormQueryRow[] | null) ?? [];
   const consentRows = (consents.data as DocumentQueryRow[] | null) ?? [];
   const ccdcFormRows = (ccdcForms.data as DocumentQueryRow[] | null) ?? [];
+
+  const formSummaryTally = new Map<string, FormSupportCount>();
+  for (const row of (formSummary.data as FormSummaryQueryRow[] | null) ?? []) {
+    if (!row.forms) continue;
+    const existing = formSummaryTally.get(row.forms.code);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      formSummaryTally.set(row.forms.code, {
+        code: row.forms.code,
+        name: row.forms.name,
+        category: row.forms.category,
+        count: 1,
+      });
+    }
+  }
+  const formSummaryCounts = Array.from(formSummaryTally.values()).sort((a, b) => b.count - a.count);
 
   const rows: ReportRow[] = [
     ...assessmentFormRows.map((row): ReportRow => ({
@@ -110,6 +141,7 @@ export default async function ReportsPage() {
           lực 60 giây — không có đường dẫn công khai.
         </p>
       </div>
+      <FormCountSummary data={formSummaryCounts} />
       <ReportsTable rows={rows} />
     </div>
   );
