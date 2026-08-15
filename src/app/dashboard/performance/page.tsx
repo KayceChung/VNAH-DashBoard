@@ -70,13 +70,22 @@ export default async function PerformancePage({ searchParams }: PerformancePageP
   const [staffList, assessmentForms, cases, assignments] = await Promise.all([
     supabase
       .from("staff")
-      .select("id, full_name, title:codes(content_vi)")
+      .select("id, full_name, title:codes!staff_title_id_fkey(content_vi)")
       .eq("status", "active")
       .order("full_name"),
     assessmentFormsQuery,
     casesQuery,
     assignmentsQuery,
   ]);
+
+  for (const [label, result] of [
+    ["staff", staffList],
+    ["assessment_forms", assessmentForms],
+    ["cases", cases],
+    ["beneficiary_assignments", assignments],
+  ] as const) {
+    if (result.error) console.error(`[dashboard/performance] ${label} query failed:`, result.error);
+  }
 
   const staffRows = (staffList.data as StaffQueryRow[] | null) ?? [];
   const assessmentFormRows = (assessmentForms.data as AssessmentFormQueryRow[] | null) ?? [];
