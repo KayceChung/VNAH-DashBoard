@@ -46,6 +46,12 @@ export interface FormSupportCount {
   count: number;
 }
 
+export interface CaseSupportCount {
+  caseId: string;
+  beneficiaryName: string;
+  count: number;
+}
+
 export interface GenderCount {
   label: string;
   count: number;

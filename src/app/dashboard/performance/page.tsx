@@ -7,8 +7,9 @@ import { StaffSelector } from "@/components/dashboard/staff-selector";
 import { PerformanceTable } from "@/components/dashboard/performance-table";
 import { HorizontalBarChart } from "@/components/dashboard/horizontal-bar-chart";
 import { StatTile } from "@/components/dashboard/stat-tile";
+import { CaseSupportTable } from "@/components/dashboard/case-support-table";
 import { ClipboardList, FolderOpen, Users } from "lucide-react";
-import type { FormSupportCount, StaffOption, StaffPerformanceRow } from "@/types/domain";
+import type { CaseSupportCount, FormSupportCount, StaffOption, StaffPerformanceRow } from "@/types/domain";
 
 const FETCH_LIMIT = 20000;
 const LEADERBOARD_CHART_LIMIT = 20;
@@ -20,7 +21,9 @@ interface StaffQueryRow {
 }
 interface AssessmentFormQueryRow {
   staff_id: string | null;
+  case_id: string;
   forms: { code: string; name: string; category: string } | null;
+  beneficiary: { full_name: string } | null;
 }
 interface CaseQueryRow {
   opened_by: string | null;
@@ -52,7 +55,7 @@ export default async function PerformancePage({ searchParams }: PerformancePageP
 
   let assessmentFormsQuery = supabase
     .from("assessment_forms")
-    .select("staff_id, forms(code, name, category)")
+    .select("staff_id, case_id, forms(code, name, category), beneficiary:beneficiaries(full_name)")
     .eq("status", "committed")
     .is("deleted_at", null)
     .limit(FETCH_LIMIT);
@@ -94,6 +97,7 @@ export default async function PerformancePage({ searchParams }: PerformancePageP
 
   const formsByStaff = new Map<string, number>();
   const formsByStaffAndForm = new Map<string, Map<string, FormSupportCount>>();
+  const formsByStaffAndCase = new Map<string, Map<string, CaseSupportCount>>();
   for (const row of assessmentFormRows) {
     if (!row.staff_id || !row.forms) continue;
     formsByStaff.set(row.staff_id, (formsByStaff.get(row.staff_id) ?? 0) + 1);
@@ -103,9 +107,23 @@ export default async function PerformancePage({ searchParams }: PerformancePageP
       byForm = new Map();
       formsByStaffAndForm.set(row.staff_id, byForm);
     }
-    const existing = byForm.get(row.forms.code);
-    if (existing) existing.count += 1;
+    const existingForm = byForm.get(row.forms.code);
+    if (existingForm) existingForm.count += 1;
     else byForm.set(row.forms.code, { code: row.forms.code, name: row.forms.name, category: row.forms.category, count: 1 });
+
+    let byCase = formsByStaffAndCase.get(row.staff_id);
+    if (!byCase) {
+      byCase = new Map();
+      formsByStaffAndCase.set(row.staff_id, byCase);
+    }
+    const existingCase = byCase.get(row.case_id);
+    if (existingCase) existingCase.count += 1;
+    else
+      byCase.set(row.case_id, {
+        caseId: row.case_id,
+        beneficiaryName: row.beneficiary?.full_name ?? "—",
+        count: 1,
+      });
   }
 
   const casesByStaff = new Map<string, number>();
@@ -203,6 +221,18 @@ export default async function PerformancePage({ searchParams }: PerformancePageP
               icon={Users}
               label="NKT phụ trách"
               value={assignmentsByStaff.get(selectedStaff.id) ?? 0}
+            />
+          </div>
+
+          <div className="rounded-lg border border-border bg-card p-4">
+            <h2 className="mb-1 text-sm font-semibold">Tổng phiếu ghi nhận theo hồ sơ</h2>
+            <p className="mb-4 text-xs text-muted-foreground">
+              Số phiếu đã ghi nhận cho từng hồ sơ (người thụ hưởng) trong khoảng thời gian đã chọn
+            </p>
+            <CaseSupportTable
+              data={Array.from(formsByStaffAndCase.get(selectedStaff.id)?.values() ?? []).sort(
+                (a, b) => b.count - a.count,
+              )}
             />
           </div>
 
