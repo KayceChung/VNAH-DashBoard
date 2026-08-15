@@ -85,6 +85,39 @@ export interface StaffPerformanceRow {
   fullName: string;
   title: string | null;
   formsCommitted: number;
+  formsDrafted: number;
+  completionRate: number | null;
   casesOpened: number;
   beneficiariesAssigned: number;
+  avgRevisions: number | null;
+}
+
+export interface TrendPoint {
+  monthLabel: string;
+  count: number;
+}
+
+export interface FunnelStepDatum {
+  label: string;
+  count: number;
+}
+
+export interface HeatmapCell {
+  weekday: number;
+  staffId: string;
+  staffLabel: string;
+  count: number;
+}
+
+export interface ScatterDatum {
+  staffId: string;
+  label: string;
+  volume: number;
+  revisions: number;
+}
+
+export interface RadarAxisDatum {
+  axis: string;
+  individual: number;
+  teamAverage: number;
 }

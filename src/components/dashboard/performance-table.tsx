@@ -20,6 +20,12 @@ export function PerformanceTable({ rows }: { rows: StaffPerformanceRow[] }) {
               Phiếu đã ghi nhận
             </th>
             <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Tỷ lệ hoàn thành
+            </th>
+            <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              TB chỉnh sửa/phiếu
+            </th>
+            <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Hồ sơ đã mở
             </th>
             <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -33,6 +39,12 @@ export function PerformanceTable({ rows }: { rows: StaffPerformanceRow[] }) {
               <td className="px-3 py-2 font-medium">{row.fullName}</td>
               <td className="px-3 py-2 text-muted-foreground">{row.title ?? "—"}</td>
               <td className="px-3 py-2 text-right tabular-nums">{row.formsCommitted.toLocaleString("vi-VN")}</td>
+              <td className="px-3 py-2 text-right tabular-nums">
+                {row.completionRate !== null ? `${Math.round(row.completionRate * 100)}%` : "N/A"}
+              </td>
+              <td className="px-3 py-2 text-right tabular-nums">
+                {row.avgRevisions !== null ? row.avgRevisions.toFixed(1) : "N/A"}
+              </td>
               <td className="px-3 py-2 text-right tabular-nums">{row.casesOpened.toLocaleString("vi-VN")}</td>
               <td className="px-3 py-2 text-right tabular-nums">
                 {row.beneficiariesAssigned.toLocaleString("vi-VN")}
