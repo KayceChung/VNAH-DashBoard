@@ -1,12 +1,9 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { FormCountSummary } from "@/components/form-count-summary";
 import { DateRangeFilter } from "@/components/dashboard/date-range-filter";
 import { BeneficiarySearchFilter } from "@/components/dashboard/beneficiary-search-filter";
-import { Pagination } from "@/components/dashboard/pagination";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatDateTime } from "@/lib/utils";
+import { PaginatedBeneficiaryList } from "@/components/dashboard/paginated-beneficiary-list";
 import type { BeneficiaryReportSummary, FormSupportCount } from "@/types/domain";
 
 const PAGE_SIZE = 20;
@@ -32,12 +29,11 @@ interface ReportBeneficiarySummaryRpcRow {
 }
 
 interface ReportsPageProps {
-  searchParams: Promise<{ q?: string; from?: string; to?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; from?: string; to?: string }>;
 }
 
 export default async function ReportsPage({ searchParams }: ReportsPageProps) {
-  const { q, from, to, page: pageParam } = await searchParams;
-  const page = Math.max(1, Number(pageParam) || 1);
+  const { q, from, to } = await searchParams;
   const supabase = await createClient();
 
   const fromBound = from ? `${from}T00:00:00` : null;
@@ -52,13 +48,16 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   if (fromBound) formSummaryQuery = formSummaryQuery.gte("created_at", fromBound);
   if (toBound) formSummaryQuery = formSummaryQuery.lte("created_at", toBound);
 
+  // Initial "Xem thêm" (load-more) batch — the client component fetches
+  // further batches on demand instead of loading the full, potentially
+  // thousands-of-NKT-long, result set up front.
   const [summaryResult, formSummary] = await Promise.all([
     supabase.rpc("report_beneficiary_summary", {
       p_search: q?.trim() || undefined,
       p_from: fromBound ?? undefined,
       p_to: toBound ?? undefined,
       p_limit: PAGE_SIZE,
-      p_offset: (page - 1) * PAGE_SIZE,
+      p_offset: 0,
     }),
     formSummaryQuery,
   ]);
@@ -100,12 +99,11 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   const formSummaryCounts = Array.from(formSummaryTally.values()).sort((a, b) => b.count - a.count);
 
   // Detail links carry the current filters forward so "Quay lại" on the
-  // detail page can return to the same search/date/page state.
+  // detail page can return to the same search/date state.
   const detailQuery = new URLSearchParams();
   if (q) detailQuery.set("q", q);
   if (from) detailQuery.set("from", from);
   if (to) detailQuery.set("to", to);
-  if (page > 1) detailQuery.set("page", String(page));
   const detailQueryString = detailQuery.toString();
 
   return (
@@ -127,51 +125,14 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
 
       <FormCountSummary data={formSummaryCounts} />
 
-      {beneficiaries.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
-          Không tìm thấy NKT nào khớp bộ lọc hiện tại.
-        </div>
-      ) : (
-        <div className="space-y-3">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Mã NKT</TableHead>
-                <TableHead>Họ tên</TableHead>
-                <TableHead className="text-right">Phiếu đánh giá</TableHead>
-                <TableHead className="text-right">Đồng thuận</TableHead>
-                <TableHead className="text-right">CCDC</TableHead>
-                <TableHead className="text-right">Tổng</TableHead>
-                <TableHead>Lần gần nhất</TableHead>
-                <TableHead className="text-right">Thao tác</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {beneficiaries.map((b) => (
-                <TableRow key={b.beneficiaryId}>
-                  <TableCell className="font-mono text-xs text-muted-foreground">{b.code ?? "—"}</TableCell>
-                  <TableCell className="font-medium">{b.fullName}</TableCell>
-                  <TableCell className="text-right tabular-nums">{b.assessmentCount}</TableCell>
-                  <TableCell className="text-right tabular-nums">{b.consentCount}</TableCell>
-                  <TableCell className="text-right tabular-nums">{b.ccdcCount}</TableCell>
-                  <TableCell className="text-right tabular-nums font-medium">{b.totalCount}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{formatDateTime(b.lastActivity)}</TableCell>
-                  <TableCell className="text-right">
-                    <Link
-                      href={`/dashboard/reports/${b.beneficiaryId}${detailQueryString ? `?${detailQueryString}` : ""}`}
-                      className="text-sm font-medium text-primary hover:underline"
-                    >
-                      Xem chi tiết
-                    </Link>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-
-          <Pagination page={page} pageSize={PAGE_SIZE} total={totalMatching} />
-        </div>
-      )}
+      <PaginatedBeneficiaryList
+        initialRows={beneficiaries}
+        initialTotal={totalMatching}
+        q={q}
+        fromBound={fromBound}
+        toBound={toBound}
+        detailQueryString={detailQueryString}
+      />
     </div>
   );
 }

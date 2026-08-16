@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarClock, ClipboardList, Clock, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { ReportsTable } from "@/components/reports-table";
+import { PaginatedReportsTable } from "@/components/dashboard/paginated-reports-table";
 import { StatTile } from "@/components/dashboard/stat-tile";
 import { InfoTile } from "@/components/dashboard/info-tile";
 import { CaseTimeline } from "@/components/dashboard/case-timeline";
@@ -10,7 +10,20 @@ import { ProgressLineChart } from "@/components/dashboard/progress-line-chart";
 import { CaseAlerts } from "@/components/dashboard/case-alerts";
 import { formatDateTime } from "@/lib/utils";
 import { buildProgressSeries } from "@/lib/individual-progress";
-import type { CaseAlert, ReportRow, TimelineEvent } from "@/types/domain";
+import type { CaseAlert, ReportResourceType, ReportRow, TimelineEvent } from "@/types/domain";
+
+const DOC_PAGE_SIZE = 20;
+
+interface DocumentRpcRow {
+  resource_type: string;
+  resource_id: string;
+  document_label: string;
+  has_pdf: boolean;
+  has_excel: boolean;
+  created_at: string;
+  staff_name: string | null;
+  total_matching: number;
+}
 
 interface StaffEmbed {
   full_name: string;
@@ -57,12 +70,12 @@ interface CaseQueryRow {
 
 interface ReportDetailPageProps {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ q?: string; from?: string; to?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; from?: string; to?: string }>;
 }
 
 export default async function ReportBeneficiaryDetailPage({ params, searchParams }: ReportDetailPageProps) {
   const { id } = await params;
-  const { q, from, to, page } = await searchParams;
+  const { q, from, to } = await searchParams;
   const supabase = await createClient();
   const nowIso = new Date().toISOString();
 
@@ -146,6 +159,17 @@ export default async function ReportBeneficiaryDetailPage({ params, searchParams
     ccdcFormsQuery = ccdcFormsQuery.lte("created_at", toBound);
   }
 
+  // Bảng tài liệu bên dưới chỉ tải batch đầu (20 dòng) qua RPC gộp union —
+  // "Xem thêm" (client) tự tải tiếp thay vì kéo hết mọi tài liệu của NKT
+  // này lên cùng lúc (có thể lên tới hàng chục/hàng trăm dòng qua nhiều năm).
+  const documentsQuery = supabase.rpc("report_beneficiary_documents", {
+    p_beneficiary_id: id,
+    p_from: fromBound ?? undefined,
+    p_to: toBound ?? undefined,
+    p_limit: DOC_PAGE_SIZE,
+    p_offset: 0,
+  });
+
   const [
     beneficiaryResult,
     primaryStaffResult,
@@ -156,6 +180,7 @@ export default async function ReportBeneficiaryDetailPage({ params, searchParams
     assessmentForms,
     consents,
     ccdcForms,
+    documentsResult,
   ] = await Promise.all([
     beneficiaryQuery,
     primaryStaffQuery,
@@ -166,6 +191,7 @@ export default async function ReportBeneficiaryDetailPage({ params, searchParams
     assessmentFormsQuery,
     consentsQuery,
     ccdcFormsQuery,
+    documentsQuery,
   ]);
 
   const beneficiary = beneficiaryResult.data as BeneficiaryDetailQueryRow | null;
@@ -298,52 +324,25 @@ export default async function ReportBeneficiaryDetailPage({ params, searchParams
     });
   }
 
-  // Bảng tài liệu (đã lọc theo from/to)
-  const assessmentFormRows = (assessmentForms.data as AssessmentFormQueryRow[] | null) ?? [];
-  const consentRows = (consents.data as DocumentQueryRow[] | null) ?? [];
-  const ccdcFormRows = (ccdcForms.data as DocumentQueryRow[] | null) ?? [];
-
-  const rows: ReportRow[] = [
-    ...assessmentFormRows.map((row): ReportRow => ({
-      resourceType: "assessment_form",
-      resourceId: row.id,
-      beneficiaryName: beneficiary.full_name,
-      beneficiaryPhone: beneficiary.phone,
-      documentLabel: row.form?.name ?? "Phiếu đánh giá",
-      hasPdf: Boolean(row.pdf_path),
-      hasExcel: Boolean(row.excel_path),
-      createdAt: row.created_at,
-      staffName: row.staff?.full_name ?? null,
-    })),
-    ...consentRows.map((row): ReportRow => ({
-      resourceType: "consent",
-      resourceId: row.id,
-      beneficiaryName: beneficiary.full_name,
-      beneficiaryPhone: beneficiary.phone,
-      documentLabel: "Biên bản đồng thuận",
-      hasPdf: Boolean(row.pdf_path),
-      hasExcel: false,
-      createdAt: row.created_at,
-      staffName: row.staff?.full_name ?? null,
-    })),
-    ...ccdcFormRows.map((row): ReportRow => ({
-      resourceType: "ccdc_form",
-      resourceId: row.id,
-      beneficiaryName: beneficiary.full_name,
-      beneficiaryPhone: beneficiary.phone,
-      documentLabel: "Biên bản cấp công cụ/dụng cụ",
-      hasPdf: Boolean(row.pdf_path),
-      hasExcel: false,
-      createdAt: row.created_at,
-      staffName: row.staff?.full_name ?? null,
-    })),
-  ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  // Bảng tài liệu — batch đầu, đã lọc theo from/to
+  const documentRpcRows = (documentsResult.data as DocumentRpcRow[] | null) ?? [];
+  const initialDocumentTotal = documentRpcRows[0]?.total_matching ?? 0;
+  const initialDocumentRows: ReportRow[] = documentRpcRows.map((row) => ({
+    resourceType: row.resource_type as ReportResourceType,
+    resourceId: row.resource_id,
+    beneficiaryName: beneficiary.full_name,
+    beneficiaryPhone: beneficiary.phone,
+    documentLabel: row.document_label,
+    hasPdf: row.has_pdf,
+    hasExcel: row.has_excel,
+    createdAt: row.created_at,
+    staffName: row.staff_name,
+  }));
 
   const backQuery = new URLSearchParams();
   if (q) backQuery.set("q", q);
   if (from) backQuery.set("from", from);
   if (to) backQuery.set("to", to);
-  if (page) backQuery.set("page", page);
   const backQueryString = backQuery.toString();
 
   return (
@@ -400,7 +399,15 @@ export default async function ReportBeneficiaryDetailPage({ params, searchParams
 
       <section className="space-y-2">
         <h2 className="text-sm font-semibold">Tài liệu (PDF/Excel)</h2>
-        <ReportsTable rows={rows} />
+        <PaginatedReportsTable
+          beneficiaryId={id}
+          beneficiaryName={beneficiary.full_name}
+          beneficiaryPhone={beneficiary.phone}
+          initialRows={initialDocumentRows}
+          initialTotal={initialDocumentTotal}
+          fromBound={fromBound}
+          toBound={toBound}
+        />
       </section>
     </div>
   );

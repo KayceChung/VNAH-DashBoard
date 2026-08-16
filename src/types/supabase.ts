@@ -1760,6 +1760,25 @@ export type Database = {
         Returns: boolean
       }
       purge_expired_beneficiaries: { Args: never; Returns: undefined }
+      report_beneficiary_documents: {
+        Args: {
+          p_beneficiary_id: string
+          p_from?: string
+          p_limit?: number
+          p_offset?: number
+          p_to?: string
+        }
+        Returns: {
+          created_at: string
+          document_label: string
+          has_excel: boolean
+          has_pdf: boolean
+          resource_id: string
+          resource_type: string
+          staff_name: string
+          total_matching: number
+        }[]
+      }
       report_beneficiary_summary: {
         Args: {
           p_from?: string
