@@ -1760,6 +1760,27 @@ export type Database = {
         Returns: boolean
       }
       purge_expired_beneficiaries: { Args: never; Returns: undefined }
+      report_beneficiary_summary: {
+        Args: {
+          p_from?: string
+          p_limit?: number
+          p_offset?: number
+          p_search?: string
+          p_to?: string
+        }
+        Returns: {
+          assessment_count: number
+          beneficiary_id: string
+          ccdc_count: number
+          code: string
+          consent_count: number
+          full_name: string
+          last_activity: string
+          phone: string
+          total_count: number
+          total_matching: number
+        }[]
+      }
       request_in_my_branch: { Args: { _request_id: string }; Returns: boolean }
     }
     Enums: {

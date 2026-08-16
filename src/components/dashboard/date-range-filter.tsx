@@ -20,13 +20,19 @@ export function DateRangeFilter() {
     else params.delete("from");
     if (to) params.set("to", to);
     else params.delete("to");
+    params.delete("page");
     router.push(`${pathname}?${params.toString()}`);
   }
 
   function clear() {
     setFrom("");
     setTo("");
-    router.push(pathname);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("from");
+    params.delete("to");
+    params.delete("page");
+    const query = params.toString();
+    router.push(query ? `${pathname}?${query}` : pathname);
   }
 
   const hasFilter = Boolean(searchParams.get("from") || searchParams.get("to"));

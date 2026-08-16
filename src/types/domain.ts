@@ -46,6 +46,18 @@ export interface FormSupportCount {
   count: number;
 }
 
+export interface BeneficiaryReportSummary {
+  beneficiaryId: string;
+  code: string | null;
+  fullName: string;
+  phone: string | null;
+  assessmentCount: number;
+  consentCount: number;
+  ccdcCount: number;
+  totalCount: number;
+  lastActivity: string;
+}
+
 export interface CaseSupportCount {
   caseId: string;
   beneficiaryName: string;
