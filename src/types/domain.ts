@@ -46,6 +46,52 @@ export interface FormSupportCount {
   count: number;
 }
 
+export interface CaseQuickStats {
+  totalForms: number;
+  totalConsents: number;
+  totalCcdc: number;
+  lastSupportAt: string | null;
+  nextAppointment: string | null;
+  daysSinceIntake: number;
+  primaryStaffName: string | null;
+  caseStatus: string | null;
+  caseOpenedAt: string | null;
+}
+
+export type TimelineEventType = "assessment_form" | "consent" | "ccdc_form" | "case_opened";
+
+export interface TimelineEvent {
+  type: TimelineEventType;
+  eventAt: string;
+  label: string;
+  status: string | null;
+}
+
+export type ProgressFormCode = "CSTN_DGHD" | "PHCN_WHODAS" | "PHCN_WHODAS_TETN";
+
+export interface ProgressPoint {
+  createdAt: string;
+  score: number;
+}
+
+/** "-" = chưa đủ dữ liệu, matching the AppSheet original formula's own "-" branch. */
+export type ImprovementStatus = "cai_thien" | "on_dinh" | "khong_cai_thien" | "-";
+
+export interface ProgressSeries {
+  formCode: ProgressFormCode;
+  seriesLabel: string;
+  points: ProgressPoint[];
+  latestStatus: ImprovementStatus;
+}
+
+export type AlertSeverity = "critical" | "warning" | "info";
+
+export interface CaseAlert {
+  key: string;
+  severity: AlertSeverity;
+  label: string;
+}
+
 export interface BeneficiaryReportSummary {
   beneficiaryId: string;
   code: string | null;
