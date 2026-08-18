@@ -24,6 +24,8 @@ export interface ReportRow {
   documentLabel: string;
   hasPdf: boolean;
   hasExcel: boolean;
+  /** Original external URL (e.g. Google Drive) some AppSheet-era "Theo dõi" forms carry in their answers — separate from our own signed-URL PDF viewer. */
+  externalLink: string | null;
   createdAt: string;
   staffName: string | null;
 }

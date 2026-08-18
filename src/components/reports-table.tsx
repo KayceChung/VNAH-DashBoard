@@ -1,12 +1,12 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { FileText, Loader2, Sheet as SheetIcon } from "lucide-react";
+import { ExternalLink, FileText, Loader2, Sheet as SheetIcon } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { PdfViewer } from "@/components/pdf-viewer";
-import { maskSensitive, formatDateTime } from "@/lib/utils";
+import { maskSensitive, formatDateTime, cn } from "@/lib/utils";
 import type { ReportRow, ReportResourceType, SignedUrlResponse } from "@/types/domain";
 
 const DOCUMENT_TYPE_LABEL: Record<ReportResourceType, string> = {
@@ -185,6 +185,17 @@ export function ReportsTable({ rows }: { rows: ReportRow[] }) {
                         )}
                         Excel
                       </Button>
+                    )}
+                    {row.externalLink && (
+                      <a
+                        href={row.externalLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={cn(buttonVariants({ size: "sm", variant: "outline" }))}
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        Link gốc
+                      </a>
                     )}
                   </div>
                 </TableCell>

@@ -1771,6 +1771,7 @@ export type Database = {
         Returns: {
           created_at: string
           document_label: string
+          external_link: string
           has_excel: boolean
           has_pdf: boolean
           resource_id: string

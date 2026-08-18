@@ -20,6 +20,7 @@ interface DocumentRpcRow {
   document_label: string;
   has_pdf: boolean;
   has_excel: boolean;
+  external_link: string | null;
   created_at: string;
   staff_name: string | null;
   total_matching: number;
@@ -333,6 +334,7 @@ export default async function ReportBeneficiaryDetailPage({ params, searchParams
     documentLabel: row.document_label,
     hasPdf: row.has_pdf,
     hasExcel: row.has_excel,
+    externalLink: row.external_link,
     createdAt: row.created_at,
     staffName: row.staff_name,
   }));
