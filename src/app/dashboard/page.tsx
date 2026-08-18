@@ -9,25 +9,25 @@ import { DateRangeFilter } from "@/components/dashboard/date-range-filter";
 import { Users, ClipboardList, MapPinned } from "lucide-react";
 import type { FormSupportCount, GenderCount, OverviewData, ProvinceCount } from "@/types/domain";
 
-// Safety cap — comfortably above VNAH's current data volume. Revisit with a
-// database-side aggregate (view/RPC) if the org's beneficiary/assessment
-// counts grow past what's reasonable to pull into a single request.
-const FETCH_LIMIT = 20000;
-
 const GENDER_LABEL: Record<string, string> = {
-  male: "Nam",
-  female: "Nữ",
+  Nam: "Nam",
+  Nữ: "Nữ",
 };
 
-interface BeneficiaryStatsRow {
+interface GenderCountsRpcRow {
   sex: string | null;
-  managing_branch_id: string | null;
-  provinces: { code: string | null; name: string } | null;
+  count: number;
 }
-
-interface AssessmentFormStatsRow {
-  form_id: string;
-  forms: { code: string; name: string; category: string } | null;
+interface ProvinceCountsRpcRow {
+  province_code: string;
+  province_name: string;
+  count: number;
+}
+interface FormCountsRpcRow {
+  form_code: string;
+  form_name: string;
+  category: string;
+  count: number;
 }
 
 interface DashboardOverviewPageProps {
@@ -38,83 +38,68 @@ export default async function DashboardOverviewPage({ searchParams }: DashboardO
   const { from, to } = await searchParams;
   const supabase = await createClient();
 
-  // The date filter scopes every section on this page — both queries below
-  // get the same created_at range applied.
-  let beneficiariesQuery = supabase
+  const fromBound = from ? `${from}T00:00:00` : undefined;
+  const toBound = to ? `${to}T23:59:59.999` : undefined;
+
+  // Aggregation happens in Postgres (RPCs below), not by pulling every
+  // beneficiary/assessment_form row into Next.js — that silently truncates
+  // at PostgREST's project-level max-rows cap once the org's data crosses
+  // it (charts under-counted once real historical data was imported).
+  let totalBeneficiariesQuery = supabase
     .from("beneficiaries")
-    .select("sex, managing_branch_id, provinces(code, name)")
+    .select("id", { count: "exact", head: true })
     .eq("status", "active")
-    .is("deleted_at", null)
-    .limit(FETCH_LIMIT);
-  if (from) beneficiariesQuery = beneficiariesQuery.gte("created_at", `${from}T00:00:00`);
-  if (to) beneficiariesQuery = beneficiariesQuery.lte("created_at", `${to}T23:59:59.999`);
+    .is("deleted_at", null);
+  if (fromBound) totalBeneficiariesQuery = totalBeneficiariesQuery.gte("created_at", fromBound);
+  if (toBound) totalBeneficiariesQuery = totalBeneficiariesQuery.lte("created_at", toBound);
 
-  let assessmentFormsQuery = supabase
+  let totalSupportQuery = supabase
     .from("assessment_forms")
-    .select("form_id, forms(code, name, category)")
+    .select("id", { count: "exact", head: true })
     .eq("status", "committed")
-    .is("deleted_at", null)
-    .limit(FETCH_LIMIT);
-  if (from) assessmentFormsQuery = assessmentFormsQuery.gte("created_at", `${from}T00:00:00`);
-  if (to) assessmentFormsQuery = assessmentFormsQuery.lte("created_at", `${to}T23:59:59.999`);
+    .is("deleted_at", null);
+  if (fromBound) totalSupportQuery = totalSupportQuery.gte("created_at", fromBound);
+  if (toBound) totalSupportQuery = totalSupportQuery.lte("created_at", toBound);
 
-  const [beneficiaries, assessmentForms] = await Promise.all([beneficiariesQuery, assessmentFormsQuery]);
+  const [totalBeneficiariesResult, totalSupportResult, genderResult, provinceResult, formResult] =
+    await Promise.all([
+      totalBeneficiariesQuery,
+      totalSupportQuery,
+      supabase.rpc("dashboard_gender_counts", { p_from: fromBound, p_to: toBound }),
+      supabase.rpc("dashboard_province_counts", { p_from: fromBound, p_to: toBound }),
+      supabase.rpc("dashboard_form_counts", { p_from: fromBound, p_to: toBound }),
+    ]);
 
-  const beneficiaryRows = (beneficiaries.data as BeneficiaryStatsRow[] | null) ?? [];
-  const assessmentFormRows = (assessmentForms.data as AssessmentFormStatsRow[] | null) ?? [];
-
-  // Gender ratio
+  // Gender ratio — any raw value that isn't Nam/Nữ (including null) merges
+  // into a single "Khác" bucket instead of one bar per unrecognized value.
   const genderTally = new Map<string, number>();
-  for (const row of beneficiaryRows) {
-    const key = row.sex ?? "unknown";
-    genderTally.set(key, (genderTally.get(key) ?? 0) + 1);
+  for (const row of (genderResult.data as GenderCountsRpcRow[] | null) ?? []) {
+    const label = (row.sex && GENDER_LABEL[row.sex]) || "Khác";
+    genderTally.set(label, (genderTally.get(label) ?? 0) + row.count);
   }
   const genderCounts: GenderCount[] = Array.from(genderTally.entries())
-    .map(([key, count]) => ({ label: GENDER_LABEL[key] ?? "Khác", count }))
+    .map(([label, count]) => ({ label, count }))
     .sort((a, b) => b.count - a.count);
 
-  // Beneficiaries by province (geography chart)
-  const provinceTally = new Map<string, { name: string; count: number }>();
-  for (const row of beneficiaryRows) {
-    const code = row.provinces?.code;
-    if (!code) continue;
-    const existing = provinceTally.get(code);
-    if (existing) {
-      existing.count += 1;
-    } else {
-      provinceTally.set(code, { name: row.provinces!.name, count: 1 });
-    }
-  }
-  const provinceCounts: ProvinceCount[] = Array.from(provinceTally.entries())
-    .map(([code, { name, count }]) => {
-      const centroid = VN_PROVINCE_CENTROIDS[code];
-      return centroid ? { code, name, count, lat: centroid.lat, lng: centroid.lng } : null;
+  const provinceRows = (provinceResult.data as ProvinceCountsRpcRow[] | null) ?? [];
+  const provinceCounts: ProvinceCount[] = provinceRows
+    .map((row) => {
+      const centroid = VN_PROVINCE_CENTROIDS[row.province_code];
+      return centroid
+        ? { code: row.province_code, name: row.province_name, count: row.count, lat: centroid.lat, lng: centroid.lng }
+        : null;
     })
     .filter((row): row is ProvinceCount => row !== null)
     .sort((a, b) => b.count - a.count);
 
-  // Support instances by the clinical forms
-  const formTally = new Map<string, FormSupportCount>();
-  for (const row of assessmentFormRows) {
-    if (!row.forms) continue;
-    const existing = formTally.get(row.forms.code);
-    if (existing) {
-      existing.count += 1;
-    } else {
-      formTally.set(row.forms.code, {
-        code: row.forms.code,
-        name: row.forms.name,
-        category: row.forms.category,
-        count: 1,
-      });
-    }
-  }
-  const formCounts = Array.from(formTally.values()).sort((a, b) => b.count - a.count);
+  const formCounts: FormSupportCount[] = ((formResult.data as FormCountsRpcRow[] | null) ?? [])
+    .map((row) => ({ code: row.form_code, name: row.form_name, category: row.category, count: row.count }))
+    .sort((a, b) => b.count - a.count);
 
   const overview: OverviewData = {
-    totalBeneficiaries: beneficiaryRows.length,
-    totalSupportInstances: assessmentFormRows.length,
-    totalProvincesCovered: provinceTally.size,
+    totalBeneficiaries: totalBeneficiariesResult.count ?? 0,
+    totalSupportInstances: totalSupportResult.count ?? 0,
+    totalProvincesCovered: provinceRows.length,
     formCounts,
     genderCounts,
     provinceCounts,

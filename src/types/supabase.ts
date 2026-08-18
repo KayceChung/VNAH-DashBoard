@@ -1749,6 +1749,30 @@ export type Database = {
       }
       case_in_my_branch: { Args: { _case_id: string }; Returns: boolean }
       current_staff_id: { Args: never; Returns: string }
+      dashboard_form_counts: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: {
+          category: string
+          count: number
+          form_code: string
+          form_name: string
+        }[]
+      }
+      dashboard_gender_counts: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: {
+          count: number
+          sex: string
+        }[]
+      }
+      dashboard_province_counts: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: {
+          count: number
+          province_code: string
+          province_name: string
+        }[]
+      }
       hard_delete_beneficiary: {
         Args: { _beneficiary_id: string }
         Returns: undefined

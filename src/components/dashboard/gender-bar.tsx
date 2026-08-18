@@ -1,6 +1,13 @@
 import type { GenderCount } from "@/types/domain";
 
-const SERIES_COLORS = ["var(--viz-series-1)", "var(--viz-series-2)"];
+// Fixed by label, not by array position — "Khác" is a catch-all for
+// anything that isn't Nam/Nữ and gets a neutral color rather than reusing
+// (and clashing with) one of the two categorical slots.
+const LABEL_COLOR: Record<string, string> = {
+  Nam: "var(--viz-series-1)",
+  Nữ: "var(--viz-series-2)",
+};
+const FALLBACK_COLOR = "var(--viz-ink-muted)";
 
 interface GenderBarProps {
   data: GenderCount[];
@@ -15,14 +22,14 @@ export function GenderBar({ data, total }: GenderBarProps) {
   return (
     <div>
       <div className="flex h-7 w-full gap-0.5 overflow-hidden rounded-full bg-[var(--viz-grid)]">
-        {data.map((item, i) => {
+        {data.map((item) => {
           const pct = (item.count / total) * 100;
           if (pct <= 0) return null;
           return (
             <div
               key={item.label}
               className="h-full first:rounded-l-full last:rounded-r-full"
-              style={{ width: `${pct}%`, backgroundColor: SERIES_COLORS[i % SERIES_COLORS.length] }}
+              style={{ width: `${pct}%`, backgroundColor: LABEL_COLOR[item.label] ?? FALLBACK_COLOR }}
               title={`${item.label}: ${item.count} (${pct.toFixed(1)}%)`}
             />
           );
@@ -30,13 +37,13 @@ export function GenderBar({ data, total }: GenderBarProps) {
       </div>
 
       <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5">
-        {data.map((item, i) => {
+        {data.map((item) => {
           const pct = (item.count / total) * 100;
           return (
             <div key={item.label} className="flex items-center gap-2 text-sm">
               <span
                 className="h-2.5 w-2.5 shrink-0 rounded-full"
-                style={{ backgroundColor: SERIES_COLORS[i % SERIES_COLORS.length] }}
+                style={{ backgroundColor: LABEL_COLOR[item.label] ?? FALLBACK_COLOR }}
               />
               <span className="font-medium text-[var(--viz-ink-primary)]">{item.label}</span>
               <span className="tabular-nums text-[var(--viz-ink-secondary)]">
