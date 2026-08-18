@@ -8,3 +8,7 @@ out
 .DS_Store
 supabase/.temp
 .claude/settings.local.json
+
+# Never commit real beneficiary/staff data exports (PII, health data).
+*.xlsx
+*.xls

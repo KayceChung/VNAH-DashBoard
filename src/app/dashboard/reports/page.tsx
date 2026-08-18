@@ -42,7 +42,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   let formSummaryQuery = supabase
     .from("assessment_forms")
     .select("forms(code, name, category)")
-    .not("pdf_path", "is", null)
+    .eq("status", "committed")
     .is("deleted_at", null)
     .limit(SUMMARY_FETCH_LIMIT);
   if (fromBound) formSummaryQuery = formSummaryQuery.gte("created_at", fromBound);

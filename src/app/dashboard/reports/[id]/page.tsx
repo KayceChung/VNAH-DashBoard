@@ -132,20 +132,18 @@ export default async function ReportBeneficiaryDetailPage({ params, searchParams
     .from("assessment_forms")
     .select("id, created_at, pdf_path, excel_path, staff:staff(full_name), form:forms(name)")
     .eq("beneficiary_id", id)
-    .not("pdf_path", "is", null)
+    .eq("status", "committed")
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
   let consentsQuery = supabase
     .from("consents")
     .select("id, created_at, pdf_path, staff:staff(full_name)")
     .eq("beneficiary_id", id)
-    .not("pdf_path", "is", null)
     .order("created_at", { ascending: false });
   let ccdcFormsQuery = supabase
     .from("ccdc_forms")
     .select("id, created_at, pdf_path, staff:staff(full_name)")
     .eq("beneficiary_id", id)
-    .not("pdf_path", "is", null)
     .order("created_at", { ascending: false });
 
   if (fromBound) {
