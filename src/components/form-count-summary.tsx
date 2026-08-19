@@ -1,3 +1,4 @@
+import { InfoTooltip } from "@/components/dashboard/info-tooltip";
 import type { FormSupportCount } from "@/types/domain";
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -19,7 +20,10 @@ export function FormCountSummary({ data }: { data: FormSupportCount[] }) {
   return (
     <div className="rounded-lg border border-border bg-card p-4">
       <div className="mb-3 flex items-baseline justify-between">
-        <h2 className="text-sm font-semibold">Tổng lượt theo loại phiếu</h2>
+        <h2 className="flex items-center gap-1.5 text-sm font-semibold">
+          Tổng lượt theo loại phiếu
+          <InfoTooltip text="Tổng số phiếu đã ghi nhận (chốt), gộp theo từng loại phiếu và chia theo 2 chương trình CSTN (Công tác xã hội) và PHCN (Phục hồi chức năng)." />
+        </h2>
         <span className="text-xs text-muted-foreground">
           {total.toLocaleString("vi-VN")} phiếu · {data.length} loại
         </span>

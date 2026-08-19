@@ -15,6 +15,7 @@ import { ActivityHeatmap } from "@/components/dashboard/activity-heatmap";
 import { ScatterQualityChart } from "@/components/dashboard/scatter-quality-chart";
 import { RadarComparisonChart } from "@/components/dashboard/radar-comparison-chart";
 import { NotAvailable } from "@/components/dashboard/not-available";
+import { InfoTooltip } from "@/components/dashboard/info-tooltip";
 import { ClipboardList, FolderOpen, Users, CheckCircle2 } from "lucide-react";
 import type {
   CaseSupportCount,
@@ -348,33 +349,58 @@ export default async function PerformancePage({ searchParams }: PerformancePageP
       {!selectedStaff ? (
         <>
           <div className="grid gap-4 sm:grid-cols-4">
-            <StatTile icon={ClipboardList} label="Phiếu đã ghi nhận (tổ chức)" value={totalCommittedOrg} />
+            <StatTile
+              icon={ClipboardList}
+              label="Phiếu đã ghi nhận (tổ chức)"
+              value={totalCommittedOrg}
+              info="Tổng số phiếu đánh giá/theo dõi đã được chốt (commit) bởi toàn bộ nhân sự, trong khoảng thời gian đã lọc."
+            />
             <StatTile
               icon={CheckCircle2}
               label="Tỷ lệ hoàn thành chung"
               value={orgCompletionRate !== null ? Math.round(orgCompletionRate * 100) : null}
               suffix="%"
+              info="Tỷ lệ phiếu đã chốt (commit) trên tổng số phiếu đã tạo, kể cả bản nháp chưa hoàn thành."
             />
-            <StatTile icon={FolderOpen} label="Hồ sơ đã mở" value={caseRows.length} />
-            <StatTile icon={Users} label="NKT đang phụ trách" value={totalNktAssignedOrg} />
+            <StatTile
+              icon={FolderOpen}
+              label="Hồ sơ đã mở"
+              value={caseRows.length}
+              info="Số hồ sơ hỗ trợ (case) được mở mới trong khoảng thời gian đã lọc."
+            />
+            <StatTile
+              icon={Users}
+              label="NKT đang phụ trách"
+              value={totalNktAssignedOrg}
+              info="Số NKT khác nhau đang được phân công cho ít nhất một nhân sự phụ trách."
+            />
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="rounded-lg border border-border bg-card p-4">
-              <h2 className="mb-1 text-sm font-semibold">Xu hướng phiếu ghi nhận theo tháng</h2>
+              <h2 className="mb-1 flex items-center gap-1.5 text-sm font-semibold">
+                Xu hướng phiếu ghi nhận theo tháng
+                <InfoTooltip text="Số phiếu đã chốt (commit) của toàn tổ chức, tính theo từng tháng — giúp thấy xu hướng tăng/giảm khối lượng công việc." />
+              </h2>
               <p className="mb-4 text-xs text-muted-foreground">Toàn tổ chức</p>
               <TrendLineChart data={trendData} unitLabel="phiếu" />
             </div>
 
             <div className="rounded-lg border border-border bg-card p-4">
-              <h2 className="mb-1 text-sm font-semibold">Phễu xử lý phiếu</h2>
+              <h2 className="mb-1 flex items-center gap-1.5 text-sm font-semibold">
+                Phễu xử lý phiếu
+                <InfoTooltip text="Số phiếu đi qua từng giai đoạn xử lý: đã tạo (kể cả bản nháp) → đã chốt (commit) → đã sinh file PDF. Số càng giảm dần ở giai đoạn sau nghĩa là còn tồn đọng." />
+              </h2>
               <p className="mb-4 text-xs text-muted-foreground">Đã tạo → Đã ghi nhận → Đã sinh PDF</p>
               <FunnelSteps data={funnelData} />
             </div>
           </div>
 
           <div className="rounded-lg border border-border bg-card p-4">
-            <h2 className="mb-1 text-sm font-semibold">Bảng xếp hạng theo số phiếu đã ghi nhận</h2>
+            <h2 className="mb-1 flex items-center gap-1.5 text-sm font-semibold">
+              Bảng xếp hạng theo số phiếu đã ghi nhận
+              <InfoTooltip text="Nhân sự được xếp hạng theo tổng số phiếu đã chốt (commit), từ cao đến thấp, trong khoảng thời gian đã lọc." />
+            </h2>
             <p className="mb-4 text-xs text-muted-foreground">
               {performanceRows.length > LEADERBOARD_CHART_LIMIT
                 ? `Top ${LEADERBOARD_CHART_LIMIT} nhân sự có số phiếu cao nhất`
@@ -391,7 +417,10 @@ export default async function PerformancePage({ searchParams }: PerformancePageP
           </div>
 
           <div className="rounded-lg border border-border bg-card p-4">
-            <h2 className="mb-1 text-sm font-semibold">Tỷ lệ hoàn thành theo nhân sự</h2>
+            <h2 className="mb-1 flex items-center gap-1.5 text-sm font-semibold">
+              Tỷ lệ hoàn thành theo nhân sự
+              <InfoTooltip text="So sánh số phiếu đã chốt (commit) với số bản nháp còn tồn đọng của từng nhân sự — thanh càng nghiêng về phần chốt nghĩa là ít tồn đọng." />
+            </h2>
             <p className="mb-4 text-xs text-muted-foreground">
               Đã ghi nhận (commit) so với bản nháp còn tồn đọng — Top {HEATMAP_STAFF_LIMIT} theo tổng số phiếu
             </p>
@@ -400,13 +429,19 @@ export default async function PerformancePage({ searchParams }: PerformancePageP
 
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="rounded-lg border border-border bg-card p-4">
-              <h2 className="mb-1 text-sm font-semibold">Nhịp hoạt động theo ngày trong tuần</h2>
+              <h2 className="mb-1 flex items-center gap-1.5 text-sm font-semibold">
+                Nhịp hoạt động theo ngày trong tuần
+                <InfoTooltip text="Mỗi ô là 1 nhân sự × 1 ngày trong tuần. Màu càng đậm nghĩa là nhân sự đó ghi nhận càng nhiều phiếu vào ngày đó." />
+              </h2>
               <p className="mb-4 text-xs text-muted-foreground">Số phiếu đã ghi nhận theo nhân sự × ngày trong tuần</p>
               <ActivityHeatmap cells={heatmapCells} staffIds={heatmapStaffIds} staffLabels={staffNameById} />
             </div>
 
             <div className="rounded-lg border border-border bg-card p-4">
-              <h2 className="mb-1 text-sm font-semibold">Khối lượng × Số lần chỉnh sửa</h2>
+              <h2 className="mb-1 flex items-center gap-1.5 text-sm font-semibold">
+                Khối lượng × Số lần chỉnh sửa
+                <InfoTooltip text="Trục ngang: số phiếu đã chốt. Trục dọc: số lần chỉnh sửa trung bình mỗi phiếu. Góc trên-trái (khối lượng cao, ít chỉnh sửa) là vùng làm việc hiệu quả nhất." />
+              </h2>
               <p className="mb-4 text-xs text-muted-foreground">
                 Mỗi điểm là 1 nhân sự — góc trên-trái (khối lượng cao, ít chỉnh sửa) là vùng đáng chú ý
               </p>
@@ -415,7 +450,10 @@ export default async function PerformancePage({ searchParams }: PerformancePageP
           </div>
 
           <div className="rounded-lg border border-border bg-card p-4">
-            <h2 className="mb-3 text-sm font-semibold">Chi tiết theo nhân sự</h2>
+            <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold">
+              Chi tiết theo nhân sự
+              <InfoTooltip text="Bảng đầy đủ các chỉ số hiệu suất của từng nhân sự — nhấp vào tên nhân sự ở bộ lọc phía trên để xem chi tiết cá nhân." />
+            </h2>
             <PerformanceTable rows={performanceRows} />
           </div>
         </>
@@ -432,7 +470,12 @@ export default async function PerformancePage({ searchParams }: PerformancePageP
           </div>
 
           <div className="grid gap-4 sm:grid-cols-4">
-            <StatTile icon={ClipboardList} label="Phiếu đã ghi nhận" value={selectedPerf?.formsCommitted ?? 0} />
+            <StatTile
+              icon={ClipboardList}
+              label="Phiếu đã ghi nhận"
+              value={selectedPerf?.formsCommitted ?? 0}
+              info="Số phiếu đánh giá/theo dõi nhân sự này đã chốt (commit), trong khoảng thời gian đã lọc."
+            />
             <StatTile
               icon={CheckCircle2}
               label="Tỷ lệ hoàn thành"
@@ -442,27 +485,47 @@ export default async function PerformancePage({ searchParams }: PerformancePageP
                   : null
               }
               suffix="%"
+              info="Tỷ lệ phiếu đã chốt trên tổng số phiếu đã tạo (kể cả bản nháp) của nhân sự này."
             />
-            <StatTile icon={FolderOpen} label="Hồ sơ đã mở" value={selectedPerf?.casesOpened ?? 0} />
-            <StatTile icon={Users} label="NKT phụ trách" value={selectedPerf?.beneficiariesAssigned ?? 0} />
+            <StatTile
+              icon={FolderOpen}
+              label="Hồ sơ đã mở"
+              value={selectedPerf?.casesOpened ?? 0}
+              info="Số hồ sơ hỗ trợ (case) nhân sự này đã mở, trong khoảng thời gian đã lọc."
+            />
+            <StatTile
+              icon={Users}
+              label="NKT phụ trách"
+              value={selectedPerf?.beneficiariesAssigned ?? 0}
+              info="Số NKT khác nhau đang được phân công cho nhân sự này phụ trách."
+            />
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="rounded-lg border border-border bg-card p-4">
-              <h2 className="mb-1 text-sm font-semibold">Xu hướng theo tháng</h2>
+              <h2 className="mb-1 flex items-center gap-1.5 text-sm font-semibold">
+                Xu hướng theo tháng
+                <InfoTooltip text="Số phiếu nhân sự này đã chốt (commit), tính theo từng tháng." />
+              </h2>
               <p className="mb-4 text-xs text-muted-foreground">Số phiếu đã ghi nhận của nhân sự này</p>
               <TrendLineChart data={personalTrendData} unitLabel="phiếu" />
             </div>
 
             <div className="rounded-lg border border-border bg-card p-4">
-              <h2 className="mb-1 text-sm font-semibold">So với trung bình team</h2>
+              <h2 className="mb-1 flex items-center gap-1.5 text-sm font-semibold">
+                So với trung bình team
+                <InfoTooltip text="Mỗi trục là percentile của nhân sự này so với toàn đội trên chỉ số tương ứng — 50 là mức trung bình, càng gần biên ngoài càng cao hơn phần đông đồng nghiệp." />
+              </h2>
               <p className="mb-4 text-xs text-muted-foreground">Percentile trên 4 chỉ số, trong khoảng thời gian đã chọn</p>
               <RadarComparisonChart data={radarData} teamSize={performanceRows.length} />
             </div>
           </div>
 
           <div className="rounded-lg border border-border bg-card p-4">
-            <h2 className="mb-1 text-sm font-semibold">Tổng phiếu ghi nhận theo hồ sơ</h2>
+            <h2 className="mb-1 flex items-center gap-1.5 text-sm font-semibold">
+              Tổng phiếu ghi nhận theo hồ sơ
+              <InfoTooltip text="Số phiếu nhân sự này đã chốt (commit) cho từng NKT — giúp thấy NKT nào đang được hỗ trợ nhiều/ít." />
+            </h2>
             <p className="mb-4 text-xs text-muted-foreground">
               Số phiếu đã ghi nhận cho từng hồ sơ (người thụ hưởng) trong khoảng thời gian đã chọn
             </p>
@@ -474,7 +537,10 @@ export default async function PerformancePage({ searchParams }: PerformancePageP
           </div>
 
           <div className="rounded-lg border border-border bg-card p-4">
-            <h2 className="mb-1 text-sm font-semibold">Phiếu đã ghi nhận theo loại</h2>
+            <h2 className="mb-1 flex items-center gap-1.5 text-sm font-semibold">
+              Phiếu đã ghi nhận theo loại
+              <InfoTooltip text="Số phiếu nhân sự này đã chốt (commit), phân theo từng loại phiếu đánh giá/theo dõi CSTN/PHCN." />
+            </h2>
             <p className="mb-4 text-xs text-muted-foreground">Trong khoảng thời gian đã chọn</p>
             {formsCommittedByStaff.get(selectedStaff.id) ? (
               <HorizontalBarChart

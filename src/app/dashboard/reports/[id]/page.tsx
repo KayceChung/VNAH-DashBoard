@@ -8,6 +8,7 @@ import { InfoTile } from "@/components/dashboard/info-tile";
 import { CaseTimeline } from "@/components/dashboard/case-timeline";
 import { ProgressLineChart } from "@/components/dashboard/progress-line-chart";
 import { CaseAlerts } from "@/components/dashboard/case-alerts";
+import { InfoTooltip } from "@/components/dashboard/info-tooltip";
 import { formatDateTime } from "@/lib/utils";
 import { buildProgressSeries } from "@/lib/individual-progress";
 import type { CaseAlert, ReportResourceType, ReportRow, TimelineEvent } from "@/types/domain";
@@ -370,8 +371,18 @@ export default async function ReportBeneficiaryDetailPage({ params, searchParams
       </div>
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatTile icon={ClipboardList} label="Tổng lượt hỗ trợ" value={totalSupportInstances} />
-        <StatTile icon={Clock} label="Đang hỗ trợ (ngày)" value={daysSinceIntake} />
+        <StatTile
+          icon={ClipboardList}
+          label="Tổng lượt hỗ trợ"
+          value={totalSupportInstances}
+          info="Tổng số phiếu đánh giá đã chốt, biên bản đồng thuận và phiếu cấp CCDC — toàn bộ lịch sử của NKT này."
+        />
+        <StatTile
+          icon={Clock}
+          label="Đang hỗ trợ (ngày)"
+          value={daysSinceIntake}
+          info="Số ngày kể từ khi NKT này được tiếp nhận vào hệ thống."
+        />
         <InfoTile icon={Users} label="Cán bộ phụ trách chính" value={primaryStaffName ?? "Chưa gán"} />
         <InfoTile
           icon={CalendarClock}
@@ -382,23 +393,35 @@ export default async function ReportBeneficiaryDetailPage({ params, searchParams
 
       {alerts.length > 0 && (
         <section className="space-y-2">
-          <h2 className="text-sm font-semibold">Cảnh báo</h2>
+          <h2 className="flex items-center gap-1.5 text-sm font-semibold">
+            Cảnh báo
+            <InfoTooltip text="Các dấu hiệu cần chú ý được hệ thống tự phát hiện từ hồ sơ NKT này: chững tiến độ, quá hạn tái khám, chưa có đánh giá cơ sở, không cải thiện, hoặc chưa có cán bộ phụ trách." />
+          </h2>
           <CaseAlerts alerts={alerts} />
         </section>
       )}
 
       <section className="space-y-2">
-        <h2 className="text-sm font-semibold">Tiến bộ theo lần ghi nhận</h2>
+        <h2 className="flex items-center gap-1.5 text-sm font-semibold">
+          Tiến bộ theo lần ghi nhận
+          <InfoTooltip text="Điểm đánh giá (VietPOS/WHODAS) qua từng lần ghi nhận — đường đi lên hay xuống thể hiện NKT đang cải thiện hay không, tuỳ theo thang điểm của từng bộ công cụ." />
+        </h2>
         <ProgressLineChart series={progressSeries} />
       </section>
 
       <section className="space-y-2">
-        <h2 className="text-sm font-semibold">Hành trình hỗ trợ</h2>
+        <h2 className="flex items-center gap-1.5 text-sm font-semibold">
+          Hành trình hỗ trợ
+          <InfoTooltip text="Dòng thời gian toàn bộ các sự kiện của NKT này: phiếu đánh giá, đồng thuận, cấp CCDC và các đợt mở hồ sơ hỗ trợ." />
+        </h2>
         <CaseTimeline events={timelineEvents} />
       </section>
 
       <section className="space-y-2">
-        <h2 className="text-sm font-semibold">Tài liệu (PDF/Excel)</h2>
+        <h2 className="flex items-center gap-1.5 text-sm font-semibold">
+          Tài liệu (PDF/Excel)
+          <InfoTooltip text="Danh sách tài liệu đã được đồng bộ từ ứng dụng di động — mở PDF, tải bảng điểm Excel, hoặc mở liên kết gốc (nếu phiếu được nhập qua AppSheet)." />
+        </h2>
         <PaginatedReportsTable
           beneficiaryId={id}
           beneficiaryName={beneficiary.full_name}

@@ -6,6 +6,7 @@ import { FormsBarChart } from "@/components/dashboard/forms-bar-chart";
 import { GenderBar } from "@/components/dashboard/gender-bar";
 import { ProvinceMap } from "@/components/dashboard/province-map";
 import { DateRangeFilter } from "@/components/dashboard/date-range-filter";
+import { InfoTooltip } from "@/components/dashboard/info-tooltip";
 import { Users, ClipboardList, MapPinned } from "lucide-react";
 import type { FormSupportCount, GenderCount, OverviewData, ProvinceCount } from "@/types/domain";
 
@@ -124,28 +125,37 @@ export default async function DashboardOverviewPage({ searchParams }: DashboardO
           icon={Users}
           label="Số người khuyết tật (NKT)"
           value={overview.totalBeneficiaries}
+          info="Tổng số hồ sơ NKT đang hoạt động (không tính hồ sơ đã xoá), trong khoảng thời gian đã lọc ở trên."
         />
         <StatTile
           icon={ClipboardList}
           label="Lượt hỗ trợ đã ghi nhận"
           value={overview.totalSupportInstances}
+          info="Tổng số phiếu đánh giá/theo dõi đã được nhân sự ghi nhận (chốt) trong khoảng thời gian đã lọc."
         />
         <StatTile
           icon={MapPinned}
           label="Tỉnh/thành có NKT"
           value={overview.totalProvincesCovered}
+          info="Số tỉnh/thành khác nhau có ít nhất 1 NKT đang được quản lý."
         />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-lg border border-border bg-card p-4">
-          <h2 className="mb-1 text-sm font-semibold">Tỷ lệ nam / nữ</h2>
+          <h2 className="mb-1 flex items-center gap-1.5 text-sm font-semibold">
+            Tỷ lệ nam / nữ
+            <InfoTooltip text="Tỷ lệ NKT theo giới tính trên tổng số NKT đang quản lý. Các giá trị giới tính không xác định hoặc còn thiếu được gộp vào nhóm 'Khác'." />
+          </h2>
           <p className="mb-4 text-xs text-muted-foreground">Trong tổng số NKT đang quản lý</p>
           <GenderBar data={overview.genderCounts} total={overview.totalBeneficiaries} />
         </div>
 
         <div className="rounded-lg border border-border bg-card p-4">
-          <h2 className="mb-1 text-sm font-semibold">NKT theo khu vực</h2>
+          <h2 className="mb-1 flex items-center gap-1.5 text-sm font-semibold">
+            NKT theo khu vực
+            <InfoTooltip text="Mỗi bong bóng là một tỉnh/thành có NKT đang được quản lý. Bong bóng càng lớn và màu càng đậm nghĩa là tỉnh đó có càng nhiều NKT." />
+          </h2>
           <p className="mb-4 text-xs text-muted-foreground">
             Kích thước &amp; màu bong bóng thể hiện số lượng NKT tại tỉnh/thành
           </p>
@@ -154,7 +164,10 @@ export default async function DashboardOverviewPage({ searchParams }: DashboardO
       </div>
 
       <div className="rounded-lg border border-border bg-card p-4">
-        <h2 className="mb-1 text-sm font-semibold">Số lượt hỗ trợ theo phiếu đánh giá</h2>
+        <h2 className="mb-1 flex items-center gap-1.5 text-sm font-semibold">
+          Số lượt hỗ trợ theo phiếu đánh giá
+          <InfoTooltip text="Số lượng phiếu đã được nhân sự ghi nhận (chốt), phân theo từng loại phiếu đánh giá/theo dõi của CSTN và PHCN." />
+        </h2>
         <p className="mb-4 text-xs text-muted-foreground">
           Số phiếu đã ghi nhận (Ghi nhận/commit) theo từng loại phiếu CSTN/PHCN
         </p>
