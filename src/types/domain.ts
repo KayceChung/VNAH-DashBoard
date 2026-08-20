@@ -132,6 +132,10 @@ export interface OverviewData {
   formCounts: FormSupportCount[];
   genderCounts: GenderCount[];
   provinceCounts: ProvinceCount[];
+  disabilityTypeCounts: GenderCount[];
+  disabilityLevelCounts: GenderCount[];
+  ethnicityCounts: GenderCount[];
+  ageGroupCounts: GenderCount[];
 }
 
 export interface StaffOption {

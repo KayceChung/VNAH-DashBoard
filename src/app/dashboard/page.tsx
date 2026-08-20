@@ -7,6 +7,7 @@ import { GenderBar } from "@/components/dashboard/gender-bar";
 import { ProvinceMap } from "@/components/dashboard/province-map";
 import { DateRangeFilter } from "@/components/dashboard/date-range-filter";
 import { InfoTooltip } from "@/components/dashboard/info-tooltip";
+import { HorizontalBarChart } from "@/components/dashboard/horizontal-bar-chart";
 import { Users, ClipboardList, MapPinned } from "lucide-react";
 import type { FormSupportCount, GenderCount, OverviewData, ProvinceCount } from "@/types/domain";
 
@@ -14,6 +15,10 @@ const GENDER_LABEL: Record<string, string> = {
   Nam: "Nam",
   Nữ: "Nữ",
 };
+
+// Nhóm tuổi là 1 dãy có thứ tự — sắp theo mảng này thay vì theo count, khác
+// với các phân bố phân loại (dạng tật, dân tộc) vốn sắp theo count giảm dần.
+const AGE_GROUP_ORDER = ["0-17", "18-29", "30-44", "45-59", "60+", "Không rõ"];
 
 interface GenderCountsRpcRow {
   sex: string | null;
@@ -28,6 +33,11 @@ interface FormCountsRpcRow {
   form_code: string;
   form_name: string;
   category: string;
+  count: number;
+}
+interface DemographicCountsRpcRow {
+  dimension: "disability_type" | "disability_level" | "ethnicity" | "age_group";
+  bucket: string;
   count: number;
 }
 
@@ -62,13 +72,14 @@ export default async function DashboardOverviewPage({ searchParams }: DashboardO
   if (fromBound) totalSupportQuery = totalSupportQuery.gte("created_at", fromBound);
   if (toBound) totalSupportQuery = totalSupportQuery.lte("created_at", toBound);
 
-  const [totalBeneficiariesResult, totalSupportResult, genderResult, provinceResult, formResult] =
+  const [totalBeneficiariesResult, totalSupportResult, genderResult, provinceResult, formResult, demographicResult] =
     await Promise.all([
       totalBeneficiariesQuery,
       totalSupportQuery,
       supabase.rpc("dashboard_gender_counts", { p_from: fromBound, p_to: toBound }),
       supabase.rpc("dashboard_province_counts", { p_from: fromBound, p_to: toBound }),
       supabase.rpc("dashboard_form_counts", { p_from: fromBound, p_to: toBound }),
+      supabase.rpc("dashboard_demographic_counts", { p_from: fromBound, p_to: toBound }),
     ]);
 
   // Gender ratio — any raw value that isn't Nam/Nữ (including null) merges
@@ -97,6 +108,17 @@ export default async function DashboardOverviewPage({ searchParams }: DashboardO
     .map((row) => ({ code: row.form_code, name: row.form_name, category: row.category, count: row.count }))
     .sort((a, b) => b.count - a.count);
 
+  const demographicRows = (demographicResult.data as DemographicCountsRpcRow[] | null) ?? [];
+  const byDimension = (dimension: DemographicCountsRpcRow["dimension"]): GenderCount[] =>
+    demographicRows
+      .filter((row) => row.dimension === dimension)
+      .map((row) => ({ label: row.bucket, count: row.count }))
+      .sort((a, b) => b.count - a.count);
+
+  const ageGroupCounts: GenderCount[] = byDimension("age_group").sort(
+    (a, b) => AGE_GROUP_ORDER.indexOf(a.label) - AGE_GROUP_ORDER.indexOf(b.label),
+  );
+
   const overview: OverviewData = {
     totalBeneficiaries: totalBeneficiariesResult.count ?? 0,
     totalSupportInstances: totalSupportResult.count ?? 0,
@@ -104,6 +126,10 @@ export default async function DashboardOverviewPage({ searchParams }: DashboardO
     formCounts,
     genderCounts,
     provinceCounts,
+    disabilityTypeCounts: byDimension("disability_type"),
+    disabilityLevelCounts: byDimension("disability_level"),
+    ethnicityCounts: byDimension("ethnicity"),
+    ageGroupCounts,
   };
 
   return (
@@ -160,6 +186,63 @@ export default async function DashboardOverviewPage({ searchParams }: DashboardO
             Kích thước &amp; màu bong bóng thể hiện số lượng NKT tại tỉnh/thành
           </p>
           <ProvinceMap data={overview.provinceCounts} />
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-lg border border-border bg-card p-4">
+          <h2 className="mb-1 flex items-center gap-1.5 text-sm font-semibold">
+            NKT theo dạng tật
+            <InfoTooltip text="Số lượng NKT phân theo dạng khuyết tật (vận động, nghe nói, nhìn, trí tuệ...). Một NKT có thể có nhiều dạng tật cùng lúc nên tổng có thể lớn hơn tổng số NKT. 'Không rõ' là hồ sơ chưa ghi nhận dạng tật." />
+          </h2>
+          <p className="mb-4 text-xs text-muted-foreground">Trong tổng số NKT đang quản lý</p>
+          <HorizontalBarChart
+            data={overview.disabilityTypeCounts.map((row) => ({ key: row.label, label: row.label, count: row.count }))}
+            emptyLabel="Chưa có dữ liệu."
+            unitLabel="NKT"
+          />
+        </div>
+
+        <div className="rounded-lg border border-border bg-card p-4">
+          <h2 className="mb-1 flex items-center gap-1.5 text-sm font-semibold">
+            NKT theo mức độ khuyết tật
+            <InfoTooltip text="Số lượng NKT phân theo mức độ khuyết tật (đặc biệt nặng / nặng / nhẹ) theo phân loại của giấy chứng nhận khuyết tật." />
+          </h2>
+          <p className="mb-4 text-xs text-muted-foreground">Trong tổng số NKT đang quản lý</p>
+          <HorizontalBarChart
+            data={overview.disabilityLevelCounts.map((row) => ({ key: row.label, label: row.label, count: row.count }))}
+            emptyLabel="Chưa có dữ liệu."
+            unitLabel="NKT"
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-lg border border-border bg-card p-4">
+          <h2 className="mb-1 flex items-center gap-1.5 text-sm font-semibold">
+            NKT theo nhóm tuổi
+            <InfoTooltip text="Nhóm tuổi tính theo ngày sinh tại thời điểm hiện tại — 'Không rõ' là hồ sơ chưa có ngày sinh." />
+          </h2>
+          <p className="mb-4 text-xs text-muted-foreground">Trong tổng số NKT đang quản lý</p>
+          <HorizontalBarChart
+            data={overview.ageGroupCounts.map((row) => ({ key: row.label, label: row.label, count: row.count }))}
+            emptyLabel="Chưa có dữ liệu."
+            unitLabel="NKT"
+            labelWidth={80}
+          />
+        </div>
+
+        <div className="rounded-lg border border-border bg-card p-4">
+          <h2 className="mb-1 flex items-center gap-1.5 text-sm font-semibold">
+            NKT theo dân tộc
+            <InfoTooltip text="Số lượng NKT phân theo dân tộc. 'Không rõ' là hồ sơ chưa ghi nhận dân tộc." />
+          </h2>
+          <p className="mb-4 text-xs text-muted-foreground">Trong tổng số NKT đang quản lý</p>
+          <HorizontalBarChart
+            data={overview.ethnicityCounts.map((row) => ({ key: row.label, label: row.label, count: row.count }))}
+            emptyLabel="Chưa có dữ liệu."
+            unitLabel="NKT"
+          />
         </div>
       </div>
 

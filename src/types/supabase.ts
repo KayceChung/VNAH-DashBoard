@@ -1749,6 +1749,14 @@ export type Database = {
       }
       case_in_my_branch: { Args: { _case_id: string }; Returns: boolean }
       current_staff_id: { Args: never; Returns: string }
+      dashboard_demographic_counts: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: {
+          bucket: string
+          count: number
+          dimension: string
+        }[]
+      }
       dashboard_form_counts: {
         Args: { p_from?: string; p_to?: string }
         Returns: {
