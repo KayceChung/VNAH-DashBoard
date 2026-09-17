@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,14 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const reason = searchParams.get("reason");
+  const sessionNotice =
+    reason === "idle"
+      ? "Bạn đã bị đăng xuất do không thao tác trong 30 phút. Vui lòng đăng nhập lại."
+      : reason === "timebox"
+        ? "Phiên đăng nhập đã hết hạn sau 12 giờ. Vui lòng đăng nhập lại."
+        : null;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -37,8 +46,11 @@ export function LoginForm() {
 
   return (
     <div className="w-full max-w-sm rounded-lg border bg-card p-6 shadow-sm">
-      <h1 className="mb-1 text-xl font-semibold text-card-foreground">VNAH Dashboard</h1>
-      <p className="mb-6 text-sm text-muted-foreground">
+      <div className="mb-4 flex justify-center">
+        <Image src="/vnah-logo.png" alt="VNAH" width={180} height={50} priority className="h-auto w-40" />
+      </div>
+      <h1 className="mb-1 text-center text-xl font-semibold text-card-foreground">VNAH Dashboard</h1>
+      <p className="mb-6 text-center text-sm text-muted-foreground">
         Đăng nhập bằng tài khoản nhân sự đã được cấp.
       </p>
 
@@ -73,6 +85,9 @@ export function LoginForm() {
           />
         </div>
 
+        {sessionNotice && !error && (
+          <p className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">{sessionNotice}</p>
+        )}
         {error && <p className="text-sm text-destructive">{error}</p>}
 
         <Button type="submit" disabled={loading} className="w-full">

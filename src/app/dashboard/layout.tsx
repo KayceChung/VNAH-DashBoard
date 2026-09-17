@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { SidebarNav } from "@/components/sidebar-nav";
@@ -25,6 +26,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <div className="flex h-screen overflow-hidden bg-muted/30">
       <aside className="hidden w-64 shrink-0 overflow-y-auto border-r border-border bg-card px-4 py-6 md:block">
         <div className="mb-6 px-2">
+          <Image src="/vnah-logo.png" alt="VNAH" width={140} height={39} className="mb-2 h-auto w-32" />
           <p className="text-sm font-semibold">VNAH Dashboard</p>
           <p className="text-xs text-muted-foreground">Báo cáo &amp; giám sát PDF</p>
         </div>
